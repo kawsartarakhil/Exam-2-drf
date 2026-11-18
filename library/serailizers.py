@@ -47,3 +47,9 @@ class BookLoanSerializer(serializers.ModelSerializer):
         model = BookLoan
         fields = "__all__"
         read_only_fields = ["loan_date","return_date","status","calculated_price"]
+
+class BookLoanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookLoan
+        fields = "__all__"
+        read_only_fields = ["loan_date","return_date","status","calculated_price"]
