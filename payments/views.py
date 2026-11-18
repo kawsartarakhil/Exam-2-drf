@@ -67,3 +67,5 @@ class PaymentDetailView(APIView):
 
         serializer = PaymentSerializer(payment)
         return Response(serializer.data)
+
+

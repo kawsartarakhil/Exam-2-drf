@@ -14,4 +14,6 @@ urlpatterns = [
     path("book-loans/<int:pk>/", BookLoanDetailView.as_view()),
     path("book-loans/<int:pk>/return/", BookReturnView.as_view()),
     path("book-loans/<int:pk>/lost/", BookLostView.as_view()),
+    path("factors/", BookPriceFactorView.as_view()),
+path("factors/<int:pk>/", BookPriceFactorDetailView.as_view()),
 ]
