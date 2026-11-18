@@ -6,7 +6,11 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework.decorators import api_view,permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny,IsAuthenticated
+from .models import CustomUser
+from library.models import Institution
+from library.models import Region
+
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -51,15 +55,76 @@ def refresh_token_view(request):
     return Response(serailizer.data,status=status.HTTP_200_OK)
 
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def logout_view(request):
     token = request.data.get("refresh")
-    refresh = RefreshToken(token=token)
-    refresh.blacklist()
-    return Response({"message":"logout successfull"})
+    if not token:
+        return Response({"error": "Refresh token required"}, status=400)
+    try:
+        refresh = RefreshToken(token)
+        refresh.blacklist()
+    except Exception:
+        return Response({"error": "Invalid refresh token"}, status=400)
+    return Response({"message": "Logout successful"})
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def profile_view(request):
     user = request.user
     serailizer = UserSerailizer(user)
     return Response(serailizer.data,status=status.HTTP_200_OK)
+
+
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
+def assign_role_view(request, pk):
+    if request.user.role != "super_admin" or not request.user.is_superuser:
+        return Response({"error": "Only super admins can assign roles"},status=status.HTTP_403_FORBIDDEN)
+
+    user = CustomUser.objects.filter(id=pk).first()
+    if user is None:
+        return Response({"error": "User not found"},status=status.HTTP_404_NOT_FOUND)
+
+    if user.id == request.user.id:
+        return Response({"error": "You cannot change your own role"},status=status.HTTP_403_FORBIDDEN)
+
+    role = request.data.get("role")
+    if role not in ["school_admin", "regional_admin", "super_admin"]:
+        return Response({"error": "Invalid role"},status=status.HTTP_400_BAD_REQUEST)
+
+    if user.is_superuser and user.id != request.user.id:
+        return Response({"error": "Cannot change another Django superuser"},status=status.HTTP_403_FORBIDDEN)
+
+    if role == "super_admin" and user.id != request.user.id:
+        return Response({"error": "Cannot assign super admin through this endpoint"},status=status.HTTP_403_FORBIDDEN)
+
+    if role == "school_admin":
+        institution_id = request.data.get("institution")
+        if not institution_id:
+            return Response({"error": "Institution required"}, status=400)
+
+        institution = Institution.objects.filter(id=institution_id).first()
+        if institution is None:
+            return Response({"error": "Institution not found"}, status=404)
+
+        user.institution = institution
+        user.region = None
+
+    elif role == "regional_admin":
+        region_id = request.data.get("region")
+        if not region_id:
+            return Response({"error": "Region required"}, status=400)
+
+        region = Region.objects.filter(id=region_id).first()
+        if region is None:
+            return Response({"error": "Region not found"}, status=404)
+        user.region = region
+        user.institution = None
+    else:
+        user.region = None
+        user.institution = None
+    user.role = role
+    user.is_active = True
+    user.save()
+
+    return Response({"message": "Role assigned successfully"})
