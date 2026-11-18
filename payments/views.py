@@ -16,7 +16,7 @@ class BillDetailView(APIView):
     def get(self, request, pk):
         bill = Bill.objects.filter(id=pk).first()
         if not bill:
-            return Response({"error": "Invoice not found"},status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "bill not found"},status=status.HTTP_404_NOT_FOUND)
 
         serializer = BillSerializer(bill)
         return Response(serializer.data)
@@ -31,13 +31,13 @@ class PaymentView(APIView):
     def post(self, request):
         serializer = PaymentSerializer(data=request.data)
         if serializer.is_valid():
-            bill = serializer.validated_data["invoice"]
+            bill = serializer.validated_data["bill"]
             amount = serializer.validated_data["amount"]
 
             if amount <= 0:
                 return Response({"error": "Payment amount must be greater than zero"},status=status.HTTP_400_BAD_REQUEST)
 
-            payments = Payment.objects.filter(invoice=bill)
+            payments = Payment.objects.filter(bill=bill)
             total_paid = sum(payment.amount for payment in payments)
             remaining = bill.total_amount - total_paid
 

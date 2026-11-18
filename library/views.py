@@ -4,6 +4,7 @@ from rest_framework import status
 from .models import *
 from .serailizers import *
 from django.utils import timezone
+from payments.models import Bill
 
 class RegionView(APIView):
     def get(self, request):
@@ -238,6 +239,9 @@ class BookLoanView(APIView):
             
             calculated_price = round(float(book.price) * float(factor.percentage) / 100, 2)
             loan = serializer.save(calculated_price=calculated_price,status="borrowed",return_date=None)
+            department_amount = round(calculated_price * 2 / 100, 2)
+            school_amount = round(calculated_price - department_amount, 2)
+            Bill.objects.create(book_loan=loan,total_amount=calculated_price,department_amount=department_amount,school_amount=school_amount,status="unpaid")
             book.available_quantity -= 1
             book.save()
 
