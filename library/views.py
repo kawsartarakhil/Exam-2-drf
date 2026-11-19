@@ -44,7 +44,8 @@ class RegionDetailView(APIView):
         if user.role == "super_admin" and user.is_superuser:
             region = Region.objects.filter(id=pk).first()
         elif user.role == "regional_admin":
-            region = Region.objects.filter(id=pk, id=user.region_id).first()
+            region = Region.objects.filter(id=pk, id__in=[user.region_id]).first()
+
 
         elif user.role == "school_admin" and user.institution_id:
             region = Region.objects.filter(id=pk,id__in=Institution.objects.filter(id=user.institution_id).values("region_id")).first()
